@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>V1067 Her — Binaria de contacto · Curva de luz CAHA 1.23 m</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&family=Spectral:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  :root{
+    --bg:#06070b; --bg2:#0a0d15;
+    --line:#1b2230; --line2:#28324a;
+    --txt:#cdd7e6; --dim:#6c788d; --dim2:#48535f;
+    --amber:#f4a737; --amberd:#a86f1b;
+    --cyan:#5fd3e0; --hot:#ffe6c0; --cool:#ffba7d;
+    --alert:#ff6b4a;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%; background:var(--bg); color:var(--txt);
+    font-family:"IBM Plex Sans",system-ui,sans-serif; overflow:hidden;}
+  #scene{position:fixed; inset:0; z-index:0;}
+  canvas{display:block;}
+
+  .mono{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums;}
+  .eyebrow{font-family:"IBM Plex Mono",monospace; text-transform:uppercase;
+    letter-spacing:.28em; font-size:9.5px; color:var(--dim); font-weight:500;}
+
+  /* ---- frame overlay ---- */
+  .ui{position:fixed; inset:0; z-index:5; pointer-events:none;}
+  .panel{position:absolute; background:linear-gradient(180deg,rgba(8,10,16,.82),rgba(8,10,16,.62));
+    border:1px solid var(--line); backdrop-filter:blur(7px) saturate(1.1);
+    -webkit-backdrop-filter:blur(7px) saturate(1.1);}
+  .panel .hdr{display:flex; align-items:center; gap:8px; padding:7px 11px;
+    border-bottom:1px solid var(--line); color:var(--dim);}
+  .tick{width:6px; height:6px; border:1px solid var(--amberd); transform:rotate(45deg);
+    flex:0 0 auto;}
+
+  /* top-left: identity */
+  #id{top:18px; left:18px; max-width:330px;}
+  #id .body{padding:11px 13px 13px;}
+  #id h1{font-family:"Spectral",serif; font-weight:500; font-size:25px; line-height:1.05;
+    letter-spacing:.01em; color:#f3f6fb;}
+  #id h1 em{font-style:italic; color:var(--amber); font-weight:400;}
+  #id .sub{font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--dim);
+    margin-top:5px; line-height:1.5;}
+  #id .tags{display:flex; flex-wrap:wrap; gap:5px; margin-top:10px;}
+  .tag{font-family:"IBM Plex Mono",monospace; font-size:9.5px; letter-spacing:.04em;
+    padding:3px 7px; border:1px solid var(--line2); color:var(--txt);
+    background:rgba(95,211,224,.05);}
+  .tag.k{color:var(--cool); border-color:rgba(255,186,125,.35);}
+
+  /* top-right: telemetry */
+  #tel{top:18px; right:18px; width:262px;}
+  #tel .body{padding:4px 0 8px;}
+  .clock{padding:11px 14px 9px; text-align:right;}
+  .clock .utc{font-family:"IBM Plex Mono",monospace; font-size:31px; font-weight:500;
+    color:var(--amber); letter-spacing:.02em; line-height:1; text-shadow:0 0 18px rgba(244,167,55,.35);}
+  .clock .date{font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--dim);
+    margin-top:5px; letter-spacing:.06em;}
+  .rows{padding:2px 14px;}
+  .row{display:flex; justify-content:space-between; align-items:baseline;
+    padding:5px 0; border-bottom:1px solid rgba(27,34,48,.6);}
+  .row:last-child{border-bottom:0;}
+  .row .lab{font-size:11px; color:var(--dim);}
+  .row .val{font-family:"IBM Plex Mono",monospace; font-size:13px; color:var(--txt); font-weight:500;}
+  .row .val.big{font-size:15px;}
+  #ph .val{color:var(--cyan);}
+  #status{margin:8px 14px 2px; padding:7px 9px; border:1px solid var(--line2);
+    font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.04em;
+    display:flex; align-items:center; gap:8px; transition:.25s; color:var(--dim);}
+  #status .dot{width:7px;height:7px;border-radius:50%;background:var(--dim2); flex:0 0 auto; transition:.25s;}
+  #status.ecl{color:#ffd9b0; border-color:var(--amberd); background:rgba(244,167,55,.07);}
+  #status.ecl .dot{background:var(--amber); box-shadow:0 0 10px var(--amber);}
+  #status.ecl.sec{color:#ffd0bd; border-color:#7a3a2a; background:rgba(255,107,74,.07);}
+  #status.ecl.sec .dot{background:var(--alert); box-shadow:0 0 10px var(--alert);}
+
+  /* left: physical params */
+  #phys{left:18px; bottom:210px; width:248px;}
+  #phys .body{padding:6px 0 7px;}
+  #phys .grp{padding:6px 14px;}
+  #phys .grp+.grp{border-top:1px solid rgba(27,34,48,.55);}
+  #phys .gl{font-family:"IBM Plex Mono",monospace; font-size:9px; letter-spacing:.22em;
+    text-transform:uppercase; color:var(--dim2); margin-bottom:5px;}
+  .pr{display:flex; justify-content:space-between; padding:2.5px 0; font-size:12px;}
+  .pr .k{color:var(--dim);}
+  .pr .v{font-family:"IBM Plex Mono",monospace; color:var(--txt);}
+  .pr .v b{color:var(--cool); font-weight:500;}
+  .pr .v i{color:var(--hot); font-style:normal;}
+
+  /* bottom: light curve */
+  #lc{left:50%; transform:translateX(-50%); bottom:16px; width:min(760px,calc(100vw - 36px)); height:182px;}
+  #lc .hdr{justify-content:space-between;}
+  #lc .hdr .r{display:flex; gap:14px; align-items:center;}
+  #lc .hdr .leg{display:flex; align-items:center; gap:5px; font-family:"IBM Plex Mono",monospace;
+    font-size:9.5px; color:var(--dim); letter-spacing:.03em;}
+  #lc .hdr .leg .sw{width:13px; height:2px;}
+  #lcwrap{position:relative; height:130px; padding:2px 6px 0;}
+  #lccanvas{position:absolute; inset:0; width:100%; height:100%;}
+
+  /* controls */
+  #ctl{left:18px; bottom:16px; width:248px; pointer-events:auto;}
+  #ctl .body{padding:9px 13px 11px;}
+  .ctlrow{display:flex; align-items:center; gap:10px;}
+  #play{pointer-events:auto; cursor:pointer; width:34px; height:34px; flex:0 0 auto;
+    border:1px solid var(--line2); background:rgba(244,167,55,.08); color:var(--amber);
+    display:flex; align-items:center; justify-content:center; transition:.18s;}
+  #play:hover{background:rgba(244,167,55,.16); border-color:var(--amberd);}
+  #play svg{width:14px; height:14px; fill:var(--amber);}
+  .slab{flex:1;}
+  .slab .t{display:flex; justify-content:space-between; font-family:"IBM Plex Mono",monospace;
+    font-size:9.5px; color:var(--dim); margin-bottom:4px; letter-spacing:.05em;}
+  input[type=range]{-webkit-appearance:none; appearance:none; width:100%; height:3px;
+    background:var(--line2); outline:none; cursor:pointer;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:13px; height:13px;
+    background:var(--amber); border:2px solid var(--bg); border-radius:50%; cursor:pointer;
+    box-shadow:0 0 8px rgba(244,167,55,.5);}
+  input[type=range]::-moz-range-thumb{width:13px; height:13px; background:var(--amber);
+    border:2px solid var(--bg); border-radius:50%; cursor:pointer;}
+  .hint{font-family:"IBM Plex Mono",monospace; font-size:9px; color:var(--dim2);
+    margin-top:9px; letter-spacing:.04em; line-height:1.5;}
+  #loadbtn{margin-top:10px; width:100%; pointer-events:auto; cursor:pointer;
+    border:1px solid var(--line2); background:rgba(95,211,224,.06); color:var(--cyan);
+    font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.04em;
+    padding:8px 9px; transition:.18s;}
+  #loadbtn:hover{background:rgba(95,211,224,.14); border-color:var(--cyan);}
+  #bandbtn{pointer-events:auto; cursor:pointer; width:26px; height:20px;
+    border:1px solid #1f77b4; background:rgba(31,119,180,.12); color:#5fb6e6;
+    font-family:"IBM Plex Mono",monospace; font-size:11px; font-weight:600; transition:.15s;}
+  #bandbtn:hover{background:rgba(31,119,180,.28);}
+  #datatag{color:var(--cyan); opacity:.8;}
+  #datatag.real{color:var(--amber);}
+
+  #loader{position:fixed; inset:0; z-index:30; background:var(--bg);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px;
+    transition:opacity .6s; }
+  #loader .ring{width:42px; height:42px; border:2px solid var(--line2);
+    border-top-color:var(--amber); border-radius:50%; animation:spin 1s linear infinite;}
+  #loader .t{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.18em;
+    color:var(--dim); text-transform:uppercase;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  @media (max-width:920px){
+    #phys{display:none;}
+    #id{max-width:62vw;} #id h1{font-size:20px;}
+    #tel{width:210px;} .clock .utc{font-size:25px;}
+  }
+  @media (max-width:620px){
+    #ctl{display:none;}
+    #lc{bottom:12px; height:160px;} #lcwrap{height:112px;}
+    #tel{top:auto; bottom:188px; right:12px; width:184px;}
+    #id{top:12px; left:12px;}
+  }
+</style>
+</head>
+<body>
+<div id="scene"></div>
+
+<div class="ui">
+  <!-- identity -->
+  <div class="panel" id="id">
+    <div class="hdr"><span class="tick"></span><span class="eyebrow">Objeto · Campaña CAHA</span></div>
+    <div class="body">
+      <h1>V1067 <em>Herculis</em></h1>
+      <div class="sub">1SWASP J174310.98+432709.6<br>TIC 193578361 · GSC 03100-01616</div>
+      <div class="tags">
+        <span class="tag">EW · binaria de contacto W UMa</span>
+        <span class="tag k">sobrecontacto · campaña 8–11 may 2026</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- telemetry / clock -->
+  <div class="panel" id="tel">
+    <div class="hdr"><span class="tick"></span><span class="eyebrow">Telemetría · Tiempo universal</span></div>
+    <div class="body">
+      <div class="clock">
+        <div class="utc mono" id="utc">23:15:30</div>
+        <div class="date mono" id="date">2026-05-09 / 10 · UT</div>
+      </div>
+      <div class="rows">
+        <div class="row" id="ph"><span class="lab">Fase orbital φ</span><span class="val big" id="phval">0.000</span></div>
+        <div class="row"><span class="lab">Magnitud V (modelo)</span><span class="val big" id="magval">13.04</span></div>
+        <div class="row"><span class="lab">Color V−R (medido)</span><span class="val">0.495 ± 0.025</span></div>
+        <div class="row"><span class="lab">Sep. proyectada</span><span class="val" id="sepval">1.91 R⊙</span></div>
+      </div>
+      <div id="status"><span class="dot"></span><span id="statustxt">FUERA DE ECLIPSE</span></div>
+    </div>
+  </div>
+
+  <!-- physical parameters -->
+  <div class="panel" id="phys">
+    <div class="hdr"><span class="tick"></span><span class="eyebrow">Parámetros · Grupo Oberón</span></div>
+    <div class="body">
+      <div class="grp">
+        <div class="gl">Medido en 2026 (CAHA)</div>
+        <div class="pr"><span class="k">Periodo P</span><span class="v">0.258108 d = 6.1946 h</span></div>
+        <div class="pr"><span class="k">Rango V</span><span class="v">13.00 – 13.64 mag</span></div>
+        <div class="pr"><span class="k">Amplitud ΔV</span><span class="v">≈ 0.56 mag</span></div>
+        <div class="pr"><span class="k">Prof. mín I / II</span><span class="v">≈ 0.56 / 0.46 mag</span></div>
+        <div class="pr"><span class="k">Color V−R</span><span class="v">0.495 ± 0.025</span></div>
+        <div class="pr"><span class="k">φ del mín II</span><span class="v">0.4946 P</span></div>
+      </div>
+      <div class="grp">
+        <div class="gl">Publicado · PHOEBE (Kjurkchieva+2015)</div>
+        <div class="pr"><span class="k">Configuración</span><span class="v">sobrecontacto</span></div>
+        <div class="pr"><span class="k">Razón másica q</span><span class="v">1.009 ± 0.005</span></div>
+        <div class="pr"><span class="k">Inclinación i</span><span class="v">75.68° ± 0.21°</span></div>
+        <div class="pr"><span class="k">T efectiva</span><span class="v"><i>5152</i> / <b>4626</b> K</span></div>
+        <div class="pr"><span class="k">r/a</span><span class="v"><i>0.400</i> / <b>0.399</b></span></div>
+        <div class="pr"><span class="k">Factor de llenado</span><span class="v">0.229</span></div>
+        <div class="pr"><span class="k">dP/dt</span><span class="v">−0.0546 s/año (Lohr+2012)</span></div>
+      </div>
+      <div class="grp">
+        <div class="gl">No determinable sin RV + ajuste físico</div>
+        <div class="pr"><span class="k">Masas, radios abs.</span><span class="v">requiere espectroscopía</span></div>
+        <div class="pr"><span class="k">Distancia</span><span class="v">requiere paralaje validada</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- light curve -->
+  <div class="panel" id="lc">
+    <div class="hdr">
+      <div style="display:flex;align-items:center;gap:8px;"><span class="tick"></span><span class="eyebrow">Curva de luz plegada · Figura 4 del informe · P=0.258108 d</span></div>
+      <div class="r">
+        <span class="leg"><span class="sw" style="background:#1f77b4"></span>medidas (azul)</span>
+        <button id="bandbtn" title="Cambiar banda V / R">V</button>
+      </div>
+    </div>
+    <div id="lcwrap"><canvas id="lccanvas"></canvas></div>
+  </div>
+
+  <!-- controls -->
+  <div class="panel" id="ctl">
+    <div class="hdr"><span class="tick"></span><span class="eyebrow">Control de simulación</span></div>
+    <div class="body">
+      <div class="ctlrow">
+        <button id="play" aria-label="Pausar / reproducir"></button>
+        <div class="slab">
+          <div class="t"><span>VELOCIDAD</span><span id="spdlab" class="mono">×1.0</span></div>
+          <input id="spd" type="range" min="0.2" max="4" step="0.1" value="1.2">
+        </div>
+      </div>
+      <div class="hint">Arrastra sobre la escena para orbitar la cámara · rueda para zoom</div>
+      <button id="loadbtn">▾ Cargar mi fotometría (CSV/TXT)</button>
+      <input id="fileinp" type="file" accept=".csv,.txt,.dat,.tsv" style="display:none">
+      <div class="hint" id="datatag">Puntos: digitalizados de la Figura 4 del informe (V y R)</div>
+    </div>
+  </div>
+</div>
+
+<div id="loader"><div class="ring"></div><div class="t" id="ltxt">Generando las componentes…</div></div>
+
+<script>
+/* ============================================================
+   V1067 Her — binaria de contacto W UMa (sobrecontacto)
+   Geometría: superficie equipotencial de Roche común (factor de llenado 0.229)
+   Curva de luz: eclipses escalados a las profundidades medidas D_I≈0.56 / D_II≈0.46 mag
+   Datos: CAHA 1.23 m, filtro V Johnson, noches 2026-05-09/10 y 10/11 (campaña 8–11 may)
+   Calibración APASS DR9 de campo · fase 0 = mínimo principal observado
+   ============================================================ */
+"use strict";
+
+/* ---------- constantes físicas del sistema ---------- */
+const Q      = 1.009;              // M2/M1  (PHOEBE, Kjurkchieva+2015)
+const A_RSUN = 1.907;              // semieje (R_sun) -> escala de escena (ilustrativo)
+const R1=0.763, R2=0.762;          // radios (R_sun) = r/a·a con r1/a=0.400, r2/a=0.399
+const T1=5152,  T2=4626;           // temperaturas (K) (PHOEBE)
+const INC    = 75.68*Math.PI/180;  // inclinación (PHOEBE)
+const PERIOD_H = 6.1946;           // periodo (horas) = 0.258108 d
+const VMAX   = 13.04;              // mag en máximo de luz (cuadratura, calibración APASS)
+const D1=0.56, D2=0.46;            // profundidades MEDIDAS 2026 (mín I / mín II)
+const PHI_SEC = 0.4946;            // fase del mínimo secundario observado
+// tiempos de mínimo medidos (MJD -> UT) ; fase 0 en mínimo principal
+const T_PRIMARY_UT = 23*3600 + 15*60 + 30;  // 23:15:30 UT (mín I, sesión 2, 9 may)
+
+/* ---------- blackbody -> RGB (Tanner Helland approx) ---------- */
+function bbColor(T){
+  let t=T/100, r,g,b;
+  r = t<=66 ? 255 : 329.698727*Math.pow(t-60,-0.1332047592);
+  g = t<=66 ? 99.4708025861*Math.log(t)-161.1195681661
+            : 288.1221695283*Math.pow(t-60,-0.0755148492);
+  b = t>=66 ? 255 : (t<=19 ? 0 : 138.5177312231*Math.log(t-10)-305.0447927307);
+  const cl=v=>Math.max(0,Math.min(255,v))/255;
+  return new THREE.Color(cl(r),cl(g),cl(b));
+}
+
+/* ============================================================
+   1.  POTENCIAL DE ROCHE  ->  malla de la superficie de contacto
+   ============================================================ */
+function omega(x,y,z){
+  const r1=Math.sqrt(x*x+y*y+z*z);
+  const r2=Math.sqrt((x-1)*(x-1)+y*y+z*z);
+  return 1/r1 + Q*(1/r2 - x) + (Q+1)/2*(x*x+y*y);
+}
+function omegaAxis(x){
+  const r1=Math.abs(x), r2=Math.abs(x-1);
+  return 1/r1 + Q*(1/r2 - x) + (Q+1)/2*(x*x);
+}
+function root(f,a,b){for(let k=0;k<160;k++){const m=(a+b)/2; if(f(a)*f(m)<=0)b=m; else a=m;} return (a+b)/2;}
+
+function gradOmega(x,y,z){            // ∇Ω  (apunta hacia el interior)
+  const h=1e-4;
+  return [
+    (omega(x+h,y,z)-omega(x-h,y,z))/(2*h),
+    (omega(x,y+h,z)-omega(x,y-h,z))/(2*h),
+    (omega(x,y,z+h)-omega(x,y,z-h))/(2*h)
+  ];
+}
+
+function buildRocheGeometry(){
+  const d=x=>{const h=1e-6; return (omegaAxis(x+h)-omegaAxis(x-h))/(2*h);};
+  const xL1=root(d,0.02,0.98);
+  const xL2=root(d,1.02,3.0);
+  const OmL1=omegaAxis(xL1), OmL2=omegaAxis(xL2);
+  const fill=0.229;                          // factor de llenado (Kjurkchieva+2015)
+  const Oms=OmL1 - fill*(OmL1-OmL2);
+  const xBack =root(x=>omegaAxis(x)-Oms, -0.95,-0.01);
+  const xFront=root(x=>omegaAxis(x)-Oms, 1.01, 2.6);
+  const xCom=Q/(1+Q);                       // centro de masas (unid. de a)
+
+  // distancia COM->superficie a lo largo del rayo (dir unitaria): primer cruce de Ω=Oms
+  function surfaceT(dx,dy,dz){
+    let tp=0.01, prev=omega(xCom+tp*dx, tp*dy, tp*dz)-Oms;
+    for(let t=0.02; t<=1.5; t+=0.01){
+      const g=omega(xCom+t*dx, t*dy, t*dz)-Oms;
+      if(g<=0){
+        let lo=tp, hi=t;
+        for(let k=0;k<44;k++){const m=(lo+hi)/2; if(omega(xCom+m*dx,m*dy,m*dz)-Oms>0)lo=m; else hi=m;}
+        return (lo+hi)/2;
+      }
+      tp=t; prev=g;
+    }
+    return 1.5;
+  }
+
+  // geoesfera (icosaedro subdividido): malla uniforme, SIN polos ni abanicos
+  const ico=new THREE.IcosahedronGeometry(1, 4);
+  const sp=ico.attributes.position.array;
+  const nV=sp.length/3;
+  const verts=new Float32Array(sp.length);
+  const norms=new Float32Array(sp.length);
+  const mixes=new Float32Array(nV);
+  const gravs=new Float32Array(nV);
+  let gMax=0;
+  for(let i=0;i<nV;i++){
+    const j=3*i;
+    let dx=sp[j], dy=sp[j+1], dz=sp[j+2];
+    const L=Math.hypot(dx,dy,dz); dx/=L; dy/=L; dz/=L;
+    const t=surfaceT(dx,dy,dz);
+    const X=xCom+t*dx, Y=t*dy, Z=t*dz;             // punto en la superficie (normalizado)
+    verts[j]=(X-xCom)*A_RSUN; verts[j+1]=Y*A_RSUN; verts[j+2]=Z*A_RSUN;
+    // normal exterior = -∇Ω / |∇Ω| ; |∇Ω| = gravedad efectiva local
+    const g=gradOmega(X,Y,Z);
+    const gm=Math.hypot(g[0],g[1],g[2]);
+    norms[j]=-g[0]/gm; norms[j+1]=-g[1]/gm; norms[j+2]=-g[2]/gm;
+    gravs[i]=gm; if(gm>gMax) gMax=gm;
+    // mezcla térmica suave a través del cuello (centrada en L1)
+    mixes[i]=Math.max(0,Math.min(1,(X-(xL1-0.10))/0.20));
+  }
+  for(let i=0;i<nV;i++) gravs[i]/=gMax;            // gravedad efectiva normalizada (0..1)
+
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(verts,3));
+  g.setAttribute('normal',   new THREE.BufferAttribute(norms,3));
+  g.setAttribute('aMix',     new THREE.BufferAttribute(mixes,1));
+  g.setAttribute('aGrav',    new THREE.BufferAttribute(gravs,1));
+  g.userData={
+    hotCenter:((xBack+xL1)/2 - xCom)*A_RSUN,
+    coolCenter:((xL1+xFront)/2 - xCom)*A_RSUN,
+    halfLen:(xFront-xBack)/2*A_RSUN
+  };
+  return g;
+}
+
+/* ============================================================
+   2.  CURVA DE LUZ  (eclipses geométricos -> escala documentada)
+   ============================================================ */
+function circOverlap(r,R,dd){
+  if(dd>=r+R) return 0;
+  if(dd<=Math.abs(R-r)) return Math.PI*Math.min(r,R)**2;
+  const a1=Math.acos((dd*dd+r*r-R*R)/(2*dd*r));
+  const a2=Math.acos((dd*dd+R*R-r*r)/(2*dd*R));
+  return r*r*a1 + R*R*a2 - 0.5*Math.sqrt((-dd+r+R)*(dd+r-R)*(dd-r+R)*(dd+r+R));
+}
+function dProj(psi){ return A_RSUN*Math.sqrt(1 - Math.sin(INC)**2 * Math.cos(psi)**2); }
+
+// perfiles normalizados de los dos eclipses (0..1)
+const ovMaxP = circOverlap(R1,R2,dProj(0));     // primario (psi=0)
+function eclipseProfiles(psi){
+  const ov=circOverlap(R1,R2,dProj(psi))/ovMaxP;
+  const toward=Math.cos(psi)*Math.sin(INC);     // >0 -> star1 detrás (primario)
+  return toward>0 ? {p1:ov,p2:0} : {p1:0,p2:ov};
+}
+// magnitud V en función de la fase orbital psi  (psi=0 -> mínimo principal)
+function magAt(psi){
+  const {p1,p2}=eclipseProfiles(psi);
+  const ellip = -0.020*Math.sin(psi)**2;        // variación elipsoidal sutil
+  return VMAX + D1*p1 + D2*p2 + ellip;
+}
+// fase observacional: mínimo principal en 0 (convención del producto científico)
+function docPhase(psi){ let p=psi/(2*Math.PI); return ((p%1)+1)%1; }
+
+// pre-muestreo del modelo (en fase observacional 0..1)
+const MODEL=[];
+for(let i=0;i<=720;i++){
+  const phd=i/720;
+  const psi=2*Math.PI*phd;
+  MODEL.push({ph:phd, mag:magAt(psi)});
+}
+
+/* ============================================================
+   3.  ESCENA  THREE.JS
+   ============================================================ */
+const sceneEl=document.getElementById('scene');
+const renderer=new THREE.WebGLRenderer({antialias:true, alpha:false});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.setClearColor(0x070302,1);
+sceneEl.appendChild(renderer.domElement);
+
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(42, innerWidth/innerHeight, 0.1, 1000);
+
+// --- fondo: gradiente radial granate (nube cálida) como la referencia ---
+(function(){
+  const cv=document.createElement('canvas'); cv.width=cv.height=512;
+  const c=cv.getContext('2d');
+  const g=c.createRadialGradient(256,250,40, 256,256,300);
+  g.addColorStop(0,'#3a1108'); g.addColorStop(0.35,'#220a06');
+  g.addColorStop(0.7,'#100503'); g.addColorStop(1,'#050201');
+  c.fillStyle=g; c.fillRect(0,0,512,512);
+  const tx=new THREE.CanvasTexture(cv);
+  scene.background=tx;
+})();
+
+// --- campo estelar (tinte cálido, deriva lenta) ---
+let starField;
+(function(){
+  const N=2100, pos=[], col=[];
+  for(let i=0;i<N;i++){
+    const r=120+Math.random()*240;
+    const th=Math.acos(2*Math.random()-1), ph=2*Math.PI*Math.random();
+    pos.push(r*Math.sin(th)*Math.cos(ph), r*Math.sin(th)*Math.sin(ph), r*Math.cos(th));
+    const w=0.5+0.5*Math.random(); const warm=0.9+0.1*Math.random();
+    col.push(w, w*warm*0.94, w*warm*0.82);
+  }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
+  const m=new THREE.PointsMaterial({size:0.95,sizeAttenuation:true,vertexColors:true,
+    transparent:true,opacity:0.9,depthWrite:false});
+  starField=new THREE.Points(g,m); scene.add(starField);
+})();
+
+// --- pivote orbital (contiene la binaria) ---
+const pivot=new THREE.Group();
+const tilt=new THREE.Group();          // inclinación del sistema
+tilt.add(pivot);
+tilt.rotation.x = (Math.PI/2 - INC);   // 14.32° -> eclipses parciales
+scene.add(tilt);
+
+// --- material de estrella (shader) ---
+// Paleta cálida tipo fotosfera (referencia visual del grupo): componentes K naranjas.
+const uCore = new THREE.Vector3(1.00, 0.93, 0.74);   // núcleo brillante (centro del disco)
+const hotCol  = new THREE.Color(1.00, 0.74, 0.42);   // cuerpo, comp. caliente (K1)
+const coolCol = new THREE.Color(1.00, 0.60, 0.31);   // cuerpo, comp. fría (K4)
+const uEdge = new THREE.Vector3(0.82, 0.27, 0.10);   // limbo enrojecido
+const starUniforms={
+  uTime:{value:0},
+  uHot:{value:new THREE.Vector3(hotCol.r,hotCol.g,hotCol.b)},
+  uCool:{value:new THREE.Vector3(coolCol.r,coolCol.g,coolCol.b)},
+  uCore:{value:uCore}, uEdge:{value:uEdge},
+};
+const starMat=new THREE.ShaderMaterial({
+  uniforms:starUniforms,
+  vertexShader:`
+    attribute float aMix; attribute float aGrav;
+    varying float vMix; varying float vGrav;
+    varying vec3 vN; varying vec3 vView; varying vec3 vObj;
+    void main(){
+      vMix=aMix; vGrav=aGrav; vObj=position;
+      vec4 mv=modelViewMatrix*vec4(position,1.0);
+      vN=normalize(normalMatrix*normal);
+      vView=normalize(-mv.xyz);
+      gl_Position=projectionMatrix*mv;
+    }`,
+  fragmentShader:`
+    precision highp float;
+    varying float vMix; varying float vGrav;
+    varying vec3 vN; varying vec3 vView; varying vec3 vObj;
+    uniform float uTime; uniform vec3 uHot; uniform vec3 uCool; uniform vec3 uCore; uniform vec3 uEdge;
+    float hash(vec3 p){ p=fract(p*0.3183099+vec3(0.1,0.2,0.3)); p*=17.0; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
+    float vnoise(vec3 p){
+      vec3 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f);
+      float n=mix(mix(mix(hash(i+vec3(0,0,0)),hash(i+vec3(1,0,0)),f.x),
+                      mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),
+                  mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),
+                      mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);
+      return n;
+    }
+    float fbm(vec3 p){ float s=0.0,a=0.5; for(int k=0;k<4;k++){ s+=a*vnoise(p); p*=2.03; a*=0.5;} return s; }
+    void main(){
+      vec3 base=mix(uHot,uCool,vMix);
+      float mu=clamp(abs(dot(normalize(vN),normalize(vView))),0.0,1.0);
+      // gravity darkening (Lucy 1967, envolvente convectiva)
+      float gd=pow(clamp(vGrav,0.04,1.0),0.34);
+      // ---- color radial tipo fotosfera: centro claro -> borde rojo ----
+      vec3 col=base;
+      col=mix(col, uCore, smoothstep(0.45,1.0,mu)*0.55);       // centro del disco más brillante
+      col=mix(col, uEdge, pow(1.0-mu,1.6)*0.90);               // limbo enrojecido
+      // ---- granulación convectiva (células) ----
+      vec3 fp=vObj*3.0; fp.x+=uTime*0.04;
+      float gran=fbm(fp)+0.5*fbm(fp*2.6+11.0);
+      gran=clamp(0.78+0.6*(gran-0.72),0.45,1.35);
+      // ---- fáculas brillantes (red caliente) ----
+      float fac=smoothstep(0.60,0.78,fbm(vObj*4.2+5.0));
+      // ---- manchas frías (sunspots) ----
+      float spot=smoothstep(0.70,0.74,fbm(vObj*3.3+30.0));
+      col*=gd*gran;
+      col+=uCore*fac*0.18*mu;                                   // fáculas
+      col=mix(col, uEdge*0.45, spot*0.7);                       // manchas oscuras rojizas
+      col+=base*pow(1.0-mu,3.0)*0.12;                           // halo de borde tenue
+      col*=1.12;                                                // realce emisivo
+      gl_FragColor=vec4(col,1.0);
+    }`,
+});
+
+// --- construir las dos estrellas (esferas) ---
+let starBodies=[], built=false;
+const D_SEP=1.52, R_HOT=0.82, R_COOL=0.76;       // separación y radios (escena)
+function makeStar(){
+  function makeBody(R,mixVal){
+    const g=new THREE.SphereGeometry(R,72,54);
+    const n=g.attributes.position.count;
+    const am=new Float32Array(n); am.fill(mixVal);
+    const ag=new Float32Array(n); ag.fill(1.0);   // gravedad uniforme (esfera)
+    g.setAttribute('aMix', new THREE.BufferAttribute(am,1));
+    g.setAttribute('aGrav',new THREE.BufferAttribute(ag,1));
+    return new THREE.Mesh(g,starMat);
+  }
+  const hot =makeBody(R_HOT, 0.0); hot.position.x =-D_SEP/2;   // componente caliente (T1)
+  const cool=makeBody(R_COOL,1.0); cool.position.x=+D_SEP/2;   // componente fría (T2)
+  pivot.add(hot); pivot.add(cool);
+  starBodies=[hot,cool];
+
+  // halos aditivos — resplandor fotosférico cálido
+  function halo(x,color,size,a0,a1,parent){
+    const cv=document.createElement('canvas'); cv.width=cv.height=128;
+    const ctx=cv.getContext('2d');
+    const gr=ctx.createRadialGradient(64,64,0,64,64,64);
+    const c=`${Math.round(color.r*255)},${Math.round(color.g*255)},${Math.round(color.b*255)}`;
+    gr.addColorStop(0,`rgba(${c},${a0})`); gr.addColorStop(0.34,`rgba(${c},${a1})`);
+    gr.addColorStop(1,`rgba(${c},0)`);
+    ctx.fillStyle=gr; ctx.fillRect(0,0,128,128);
+    const tx=new THREE.CanvasTexture(cv);
+    const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tx,transparent:true,
+      blending:THREE.AdditiveBlending,depthWrite:false,depthTest:false}));
+    sp.scale.set(size,size,1); sp.position.set(x,0,0); (parent||pivot).add(sp);
+    return sp;
+  }
+  const warm=new THREE.Color(1.0,0.55,0.28);
+  halo(0, warm, (D_SEP/2+R_HOT)*4.0, 0.13, 0.04, tilt);   // resplandor global envolvente
+  halo(-D_SEP/2, hotCol,  R_HOT*3.4, 0.50, 0.12);
+  halo(+D_SEP/2, coolCol, R_COOL*3.2,0.50, 0.12);
+  built=true;
+}
+
+/* ---------- cámara orbital (drag) ---------- */
+let camTheta=0.0, camPhi=0.30, camR=A_RSUN*4.6;
+let drag=false, lx=0, ly=0;
+function updCam(){
+  const x=camR*Math.cos(camPhi)*Math.sin(camTheta);
+  const y=camR*Math.sin(camPhi);
+  const z=camR*Math.cos(camPhi)*Math.cos(camTheta);
+  camera.position.set(x,y,z); camera.lookAt(0,0,0);
+}
+updCam();
+const cv=renderer.domElement;
+cv.style.touchAction='none';
+cv.addEventListener('pointerdown',e=>{drag=true;lx=e.clientX;ly=e.clientY;cv.setPointerCapture(e.pointerId);});
+cv.addEventListener('pointerup',  ()=>drag=false);
+cv.addEventListener('pointermove',e=>{ if(!drag)return;
+  camTheta-=(e.clientX-lx)*0.006; camPhi+=(e.clientY-ly)*0.006;
+  camPhi=Math.max(-1.45,Math.min(1.45,camPhi)); lx=e.clientX; ly=e.clientY; updCam();});
+cv.addEventListener('wheel',e=>{e.preventDefault();
+  camR*=(1+Math.sign(e.deltaY)*0.08); camR=Math.max(A_RSUN*2.6,Math.min(A_RSUN*9,camR)); updCam();
+},{passive:false});
+
+/* ============================================================
+   4.  CURVA DE LUZ — canvas 2D
+   ============================================================ */
+const lcv=document.getElementById('lccanvas'), lctx=lcv.getContext('2d');
+let lcW=0,lcH=0;
+function sizeLC(){
+  const r=lcv.getBoundingClientRect(), dpr=Math.min(devicePixelRatio,2);
+  lcv.width=r.width*dpr; lcv.height=r.height*dpr; lctx.setTransform(dpr,0,0,dpr,0,0);
+  lcW=r.width; lcH=r.height;
+}
+// ejes por banda, idénticos a la Figura 4 del informe
+const AXES={ V:{top:12.96, bot:13.66, t0:13.0, t1:13.6, dt:0.1},
+            R:{top:12.46, bot:13.10, t0:12.5, t1:13.0, dt:0.1} };
+let curBand='V';
+const PADL=42, PADR=10, PADT=10, PADB=20;
+function xOf(ph){ return PADL+(lcW-PADL-PADR)*ph; }
+function yOf(m){ const ax=AXES[curBand]; return PADT+(lcH-PADT-PADB)*(m-ax.top)/(ax.bot-ax.top); }
+
+/* ---------- datos observados ----------
+   Por defecto: puntos DIGITALIZADOS de la Figura 4 del informe (curva plegada V y R).
+   Si el usuario carga su fichero de fotometría (CSV/TXT) se sustituyen por sus medidas. */
+const PTS_V=[
+[0.0068,13.543],[0.0144,13.612],[0.0240,13.520],[0.0319,13.563],[0.0394,13.531],[0.0455,13.489],[0.0499,13.445],[0.0547,13.399],[0.0615,13.455],[0.0726,13.397],[0.0806,13.350],[0.0891,13.312],[0.0986,13.280],[0.1049,13.260],[0.1127,13.239],[0.1271,13.213],[0.1425,13.179],[0.1498,13.208],[0.1530,13.253],[0.1593,13.162],[0.1593,13.218],[0.1694,13.119],[0.1757,13.192],[0.1789,13.159],[0.1820,13.109],[0.1950,13.178],[0.2141,13.122],[0.2845,13.052],[0.2876,13.035],[0.3047,13.044],[0.3192,13.062],[0.3397,13.090],[0.4425,13.392],[0.4456,13.361],[0.4532,13.402],[0.4650,13.441],[0.4991,13.482],[0.5286,13.434],[0.5430,13.385],[0.5461,13.450],[0.5607,13.358],[0.5638,13.340],[0.5670,13.311],[0.5759,13.321],[0.5790,13.410],[0.5822,13.245],[0.5926,13.231],[0.5973,13.180],[0.6081,13.187],[0.6081,13.159],[0.6228,13.120],[0.6429,13.140],[0.6542,13.106],[0.6574,13.133],[0.6612,13.078],[0.6751,13.095],[0.6789,13.012],[0.6862,13.041],[0.6950,13.005],[0.7080,13.021],[0.8052,13.077],[0.8310,13.114],[0.8555,13.150],[0.8635,13.182],[0.8827,13.226],[0.8970,13.203],[0.9022,13.288],[0.9159,13.315],[0.9159,13.339],[0.9255,13.370],[0.9337,13.409],[0.9418,13.357],[0.9418,13.447],[0.9450,13.406],[0.9469,13.482],[0.9482,13.386],[0.9582,13.529],[0.9629,13.459],[0.9646,13.561],[0.9765,13.510],[0.9872,13.624],[0.9902,13.544],[0.9949,13.562]];
+const PTS_R=[
+[0.0171,13.020],[0.0310,12.981],[0.0468,12.953],[0.2984,12.567],[0.3123,12.578],[0.3268,12.596],[0.3407,12.611],[0.3546,12.629],[0.4501,12.901],[0.4640,12.927],[0.4779,12.967],[0.4918,12.990],[0.5043,12.987],[0.5196,12.964],[0.5379,12.923],[0.5569,12.876],[0.5714,12.781],[0.5866,12.744],[0.6011,12.677],[0.6157,12.659],[0.6296,12.607],[0.6504,12.591],[0.6719,12.546],[0.6865,12.528],[0.7016,12.512],[0.8906,13.055],[0.9109,12.777],[0.9381,12.863],[0.9526,12.916],[0.9703,12.991],[0.9848,13.027],[0.9973,13.065]];
+let OBS={ V:PTS_V.map(p=>({ph:p[0],mag:p[1],band:'V'})),
+          R:PTS_R.map(p=>({ph:p[0],mag:p[1],band:'R'})) };
+let dataSrc='Figura 4 del informe (digitalizada)';
+
+// --- parser de fotometría real (CSV/TXT) ---
+const T0_MJD=61169.96909, P_DAYS=0.258108;     // fase 0 = mín I (sesión 2)
+function foldToPhase(t){
+  let T0=T0_MJD;
+  if(t>2.0e6) T0=T0_MJD+2400000.5;             // BJD/HJD/JD
+  let ph=((t-T0)/P_DAYS)%1; return ((ph%1)+1)%1;
+}
+function parsePhotometry(text){
+  const V=[],R=[];
+  const lines=text.split(/\r?\n/);
+  for(const ln of lines){
+    const s=ln.trim(); if(!s) continue;
+    const tok=s.split(/[\s,;\t]+/).filter(Boolean);
+    if(tok.length<2) continue;
+    const a=parseFloat(tok[0]), b=parseFloat(tok[1]);
+    if(!isFinite(a)||!isFinite(b)) continue;    // salta cabeceras
+    let ph = (a>=0 && a<=1.5) ? (a%1) : foldToPhase(a);
+    ph=((ph%1)+1)%1;
+    const bt=(tok[2]||'').toUpperCase();
+    if(bt.startsWith('R')) R.push({ph,mag:b,band:'R'}); else V.push({ph,mag:b,band:'V'});
+  }
+  return {V,R};
+}
+
+
+function drawLC(curPh,curMag,reveal){
+  const css=getComputedStyle(document.documentElement);
+  const cTxt=css.getPropertyValue('--dim').trim();
+  const cAm=css.getPropertyValue('--amber').trim();
+  const BLUE='#1f77b4';                          // azul matplotlib (idéntico al informe)
+  const ax=AXES[curBand];
+  lctx.clearRect(0,0,lcW,lcH);
+  lctx.lineWidth=1; lctx.font='9px "IBM Plex Mono",monospace'; lctx.textBaseline='middle';
+  lctx.fillStyle=cTxt;
+  for(let m=ax.t0; m<=ax.t1+1e-6; m+=ax.dt){
+    const y=yOf(m); lctx.strokeStyle='rgba(40,50,74,0.45)';
+    lctx.beginPath(); lctx.moveTo(PADL,y); lctx.lineTo(lcW-PADR,y); lctx.stroke();
+    lctx.textAlign='right'; lctx.fillText(m.toFixed(1),PADL-6,y);
+  }
+  lctx.textAlign='center'; lctx.textBaseline='top';
+  for(let p=0;p<=1.001;p+=0.25){
+    const x=xOf(p); lctx.strokeStyle='rgba(40,50,74,0.25)';
+    lctx.beginPath(); lctx.moveTo(x,PADT); lctx.lineTo(x,lcH-PADB); lctx.stroke();
+    lctx.fillStyle=cTxt; lctx.fillText(p.toFixed(2),x,lcH-PADB+4);
+  }
+  // línea discontinua azul en φ=0.5 (como la Figura 4)
+  lctx.strokeStyle=BLUE; lctx.globalAlpha=0.55; lctx.setLineDash([5,4]); lctx.lineWidth=1.1;
+  lctx.beginPath(); lctx.moveTo(xOf(0.5),PADT); lctx.lineTo(xOf(0.5),lcH-PADB); lctx.stroke();
+  lctx.setLineDash([]); lctx.globalAlpha=1;
+  // puntos observados de la banda activa, revelados hasta la fase actual
+  const pts=OBS[curBand]||[];
+  lctx.strokeStyle=BLUE; lctx.fillStyle=BLUE; lctx.lineWidth=1.4;
+  for(const o of pts){
+    if(o.ph>reveal) continue;
+    const x=xOf(o.ph), y=yOf(o.mag);
+    if(curBand==='R'){                            // marcador 'x' (cruz) como en el informe
+      lctx.beginPath(); lctx.moveTo(x-2.6,y-2.6); lctx.lineTo(x+2.6,y+2.6);
+      lctx.moveTo(x+2.6,y-2.6); lctx.lineTo(x-2.6,y+2.6); lctx.stroke();
+    }else{                                        // círculo relleno
+      lctx.beginPath(); lctx.arc(x,y,2.4,0,7); lctx.fill();
+    }
+  }
+  // marcador de fase actual (sincronizado con el giro 3D)
+  if(curMag>=ax.top-0.4 && curMag<=ax.bot+0.4){
+    const cx=xOf(curPh), cy=yOf(curMag);
+    lctx.strokeStyle=cAm; lctx.lineWidth=1.4;
+    lctx.beginPath(); lctx.arc(cx,cy,5.5,0,7); lctx.stroke();
+    lctx.fillStyle=cAm; lctx.beginPath(); lctx.arc(cx,cy,2.2,0,7); lctx.fill();
+    lctx.strokeStyle='rgba(244,167,55,0.28)';
+    lctx.beginPath(); lctx.moveTo(cx,PADT); lctx.lineTo(cx,lcH-PADB); lctx.stroke();
+  }
+}
+
+/* ============================================================
+   5.  BUCLE DE ANIMACIÓN
+   ============================================================ */
+const $=id=>document.getElementById(id);
+let psi=0;                       // fase orbital (0 = primario)
+let playing=true, speed=1.2;
+
+// --- objetos veloces de fondo (meteoros / cometas) ---
+const COMETS=[]; const TRAIL=14;
+(function(){
+  for(let i=0;i<6;i++){
+    const geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(TRAIL*3),3));
+    const tint=Math.random()<0.5? new THREE.Color(0.72,0.86,1.0):new THREE.Color(1.0,0.86,0.66);
+    const mat=new THREE.LineBasicMaterial({color:tint,transparent:true,opacity:0,
+      blending:THREE.AdditiveBlending,depthWrite:false});
+    const line=new THREE.Line(geo,mat);
+    const cv=document.createElement('canvas'); cv.width=cv.height=64; const cx=cv.getContext('2d');
+    const gr=cx.createRadialGradient(32,32,0,32,32,32);
+    gr.addColorStop(0,'rgba(255,255,255,0.95)');
+    gr.addColorStop(0.4,`rgba(${(tint.r*255)|0},${(tint.g*255)|0},${(tint.b*255)|0},0.5)`);
+    gr.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=gr; cx.fillRect(0,0,64,64);
+    const head=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),
+      transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:0}));
+    head.scale.setScalar(2.4);
+    scene.add(line); scene.add(head);
+    COMETS.push({line,head,geo,mat,trail:[],pos:new THREE.Vector3(),vel:new THREE.Vector3(),
+      delay:1+Math.random()*9,life:0,active:false});
+  }
+})();
+function spawnComet(c){
+  const R=72, a=Math.random()*Math.PI*2, el=(Math.random()-0.5)*1.4;
+  c.pos.set(R*Math.cos(a)*Math.cos(el), R*Math.sin(el), R*Math.sin(a)*Math.cos(el));
+  const tgt=new THREE.Vector3((Math.random()-0.5)*34,(Math.random()-0.5)*34,(Math.random()-0.5)*34);
+  c.vel.copy(tgt).sub(c.pos).normalize().multiplyScalar(34+Math.random()*46);  // rápido
+  c.trail.length=0; c.life=0; c.active=true; c.mat.opacity=0; c.head.material.opacity=0;
+}
+function updComets(dt){
+  for(const c of COMETS){
+    if(!c.active){ c.delay-=dt; if(c.delay<=0) spawnComet(c); else continue; }
+    c.life+=dt;
+    c.pos.addScaledVector(c.vel,dt);
+    c.trail.unshift(c.pos.clone()); if(c.trail.length>TRAIL) c.trail.pop();
+    const arr=c.geo.attributes.position.array;
+    for(let i=0;i<TRAIL;i++){ const p=c.trail[Math.min(i,c.trail.length-1)]; arr[i*3]=p.x; arr[i*3+1]=p.y; arr[i*3+2]=p.z; }
+    c.geo.attributes.position.needsUpdate=true; c.geo.setDrawRange(0,c.trail.length);
+    c.head.position.copy(c.pos);
+    const op=Math.min(1,c.life*3);
+    c.mat.opacity=0.55*op; c.head.material.opacity=0.9*op;
+    if(c.pos.length()>98){ c.active=false; c.delay=5+Math.random()*12; c.mat.opacity=0; c.head.material.opacity=0; }
+  }
+}
+
+
+function fmtUT(sec){
+  sec=((sec%86400)+86400)%86400;
+  const h=Math.floor(sec/3600), m=Math.floor(sec%3600/60), s=Math.floor(sec%60);
+  const z=n=>String(n).padStart(2,'0');
+  return `${z(h)}:${z(m)}:${z(s)}`;
+}
+
+const playBtn=$('play');
+function setPlayIcon(){
+  playBtn.innerHTML = playing
+    ? '<svg viewBox="0 0 14 14"><rect x="2" y="1.5" width="3.2" height="11"/><rect x="8.8" y="1.5" width="3.2" height="11"/></svg>'
+    : '<svg viewBox="0 0 14 14"><path d="M2 1.5 L12.5 7 L2 12.5 Z"/></svg>';
+}
+playBtn.onclick=()=>{playing=!playing; setPlayIcon();};
+$('spd').oninput=e=>{speed=parseFloat(e.target.value); $('spdlab').textContent='×'+speed.toFixed(1);};
+if(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches){ playing=false; }
+setPlayIcon();
+
+const clock=new THREE.Clock();
+let revealMax=0;
+function loop(){
+  requestAnimationFrame(loop);
+  const dt=Math.min(clock.getDelta(),0.05);
+  starUniforms.uTime.value+=dt;
+
+  if(playing && built){
+    psi += dt*speed*0.45;            // velocidad angular orbital
+    if(psi>=2*Math.PI){ psi-=2*Math.PI; revealMax=0; }
+  }
+  if(built){
+    pivot.rotation.y = psi - Math.PI/2;          // órbita (rotación síncrona)
+    starBodies[0].rotation.y += dt*0.05;         // rotación propia (granulación)
+    starBodies[1].rotation.y += dt*0.05;
+  }
+  if(starField) starField.rotation.y += dt*0.004; // fondo estelar: deriva muy lenta
+  updComets(dt);
+
+  const phd=docPhase(psi);
+  if(playing) revealMax=Math.max(revealMax,phd);
+  const mag=magAt(psi);
+  const {p1,p2}=eclipseProfiles(psi);
+  // reloj UT a partir del mínimo principal medido (mín I, 23:15:30 UT)
+  const ut = T_PRIMARY_UT + (psi/(2*Math.PI))*PERIOD_H*3600;
+  $('utc').textContent=fmtUT(ut);
+  $('date').textContent = (ut>=86400?'2026-05-10':'2026-05-09')+' · UT';
+  $('phval').textContent=phd.toFixed(3);
+  $('magval').textContent=mag.toFixed(2);
+  $('sepval').textContent=dProj(psi).toFixed(2)+' R⊙';
+
+  const st=$('status'), stt=$('statustxt');
+  if(p1>0.04){ st.className='ecl'; stt.textContent='MÍN I · componente caliente ocultada'; }
+  else if(p2>0.04){ st.className='ecl sec'; stt.textContent='MÍN II · componente fría ocultada'; }
+  else { st.className=''; stt.textContent='FUERA DE ECLIPSE'; }
+
+  drawLC(phd,mag, dataLoaded?1:revealMax);
+  renderer.render(scene,camera);
+}
+
+/* ---------- carga de fotometría real ---------- */
+let dataLoaded=false;
+const loadBtn=$('loadbtn'), fileInp=$('fileinp'), dataTag=$('datatag');
+loadBtn.onclick=()=>fileInp.click();
+fileInp.onchange=e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{
+      const r=parsePhotometry(String(rd.result));
+      const total=r.V.length+r.R.length;
+      if(total<3){ dataTag.textContent='No se reconocieron columnas (esperado: tiempo|fase, magnitud[,banda]).'; return; }
+      OBS={V:r.V, R:r.R}; dataLoaded=true; revealMax=0;
+      if(r.V.length===0 && r.R.length>0) curBand='R';
+      dataTag.classList.add('real');
+      dataTag.textContent=`Datos reales: ${r.V.length} V${r.R.length?', '+r.R.length+' R':''} · ${f.name}`;
+      updBandBtn();
+    }catch(err){ dataTag.textContent='Error leyendo el fichero.'; }
+  };
+  rd.readAsText(f);
+};
+
+/* ---------- toggle de banda V / R ---------- */
+const bandBtn=$('bandbtn');
+function updBandBtn(){ if(bandBtn) bandBtn.textContent=curBand; }
+if(bandBtn){ bandBtn.onclick=()=>{ curBand=(curBand==='V'?'R':'V'); updBandBtn(); }; updBandBtn(); }
+
+/* ---------- arranque ---------- */
+function onResize(){
+  renderer.setSize(innerWidth,innerHeight);
+  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+  sizeLC();
+}
+addEventListener('resize',onResize);
+
+setTimeout(()=>{                       // permitir pintar el loader
+  makeStar();
+  sizeLC();
+  const ld=$('loader'); ld.style.opacity='0'; setTimeout(()=>ld.remove(),650);
+  loop();
+}, 60);
+</script>
+</body>
+</html>
